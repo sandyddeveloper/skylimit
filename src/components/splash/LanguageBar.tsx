@@ -33,15 +33,14 @@ export function LanguageBar({ languages, loading, delay = 600 }: LanguageBarProp
   }
 
   // Doughnut segments math
-  let accumulatedPercent = 0;
   const radius = 38;
   const circumference = 2 * Math.PI * radius;
   const topLang = languages[0] || { name: "None", percentage: 0 };
 
   const segments = languages.map((lang, i) => {
     const strokeDashoffset = circumference - (lang.percentage / 100) * circumference;
-    const rotation = (accumulatedPercent / 100) * 360;
-    accumulatedPercent += lang.percentage;
+    const prevPercentageSum = languages.slice(0, i).reduce((sum, l) => sum + l.percentage, 0);
+    const rotation = (prevPercentageSum / 100) * 360;
     return (
       <circle
         key={lang.name}
@@ -73,7 +72,7 @@ export function LanguageBar({ languages, loading, delay = 600 }: LanguageBarProp
         {/* Doughnut SVG */}
         <div className="sd-lang-chart-container">
           <svg viewBox="0 0 100 100" className="sd-lang-doughnut">
-            <circle cx="50" cy="50" r={radius} fill="transparent" stroke="rgba(255,255,255,0.02)" strokeWidth="6" />
+            <circle cx="50" cy="50" r={radius} fill="transparent" stroke="var(--sd-lang-track-bg)" strokeWidth="6" />
             {segments}
           </svg>
           <div className="sd-lang-center-text">

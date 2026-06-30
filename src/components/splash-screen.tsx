@@ -2,13 +2,14 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useGitHubStats } from "@/hooks/use-github-stats";
+import { useTheme } from "@/hooks/use-theme";
 import { ProfileCard } from "./splash/ProfileCard";
 import { StatCard } from "./splash/StatCard";
 import { LanguageBar } from "./splash/LanguageBar";
 import { ContributionGrid } from "./splash/ContributionGrid";
 
-// ── Subtle floating particles ──
-function ParticleCanvas() {
+// ── Futuristic 3D Perspective Git Grid Canvas ──
+function ParticleCanvas({ theme }: { theme: "light" | "dark" }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef(0);
 
@@ -19,16 +20,40 @@ function ParticleCanvas() {
     if (!ctx) return;
 
     let w = 0, h = 0, dpr = 1;
+    const focalLength = 280;
+    const maxDepth = 1000;
 
-    interface Dot {
-      x: number; y: number;
-      vx: number; vy: number;
-      size: number;
-      alpha: number;
-      phase: number;
+    const gitPhrases = [
+      "git commit -m 'feat: custom audio engine'",
+      "git push origin prod-main",
+      "commit c8a3b8d",
+      "commit e4b1a62",
+      "index.css compiled (+185, -24)",
+      "git branch -a --list",
+      "Merge branch 'hotfix/vanta-compat'",
+      "TypeScript 94.2%",
+      "git clone https://github.com/sandyddeveloper/skylimit",
+      "package.json updated (+12, -4)",
+      "System fully functional (200 OK)",
+      "SSL handshake verification complete",
+      "GET /api/github/stats/sandyddeveloper",
+      "1,087 contributions parsed",
+      "git checkout -b release/v1.0.0",
+      "ping api.github.com: 14ms",
+      "npm run dev --port:3000"
+    ];
+
+    interface GitTextParticle {
+      x: number;
+      y: number;
+      z: number;
+      text: string;
+      speed: number;
+      colorType: number;
+      opacity: number;
     }
 
-    let dots: Dot[] = [];
+    let particles: GitTextParticle[] = [];
 
     const init = () => {
       w = window.innerWidth;
@@ -40,37 +65,91 @@ function ParticleCanvas() {
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.min(Math.floor((w * h) / 14000), 100);
-      dots = Array.from({ length: count }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.12,
-        vy: (Math.random() - 0.5) * 0.12,
-        size: 0.8 + Math.random() * 1.2,
-        alpha: 0.06 + Math.random() * 0.1,
-        phase: Math.random() * Math.PI * 2,
+      // Create a set of 3D particles
+      particles = Array.from({ length: 30 }, () => ({
+        x: (Math.random() - 0.5) * w * 1.8,
+        y: (Math.random() - 0.5) * h * 1.5,
+        z: Math.random() * maxDepth,
+        text: gitPhrases[Math.floor(Math.random() * gitPhrases.length)],
+        speed: 1.2 + Math.random() * 2.2,
+        colorType: Math.random() > 0.5 ? 0 : 1,
+        opacity: 0.12 + Math.random() * 0.28
       }));
     };
     init();
 
-    let t = 0;
+    let gridOffset = 0;
     const animate = () => {
-      t += 0.008;
       ctx.clearRect(0, 0, w, h);
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const isDark = theme === "dark";
 
-      for (const p of dots) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = w;
-        if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        if (p.y > h) p.y = 0;
+      // Draw perspective grid floor (occupies bottom 60% of viewport)
+      ctx.strokeStyle = isDark ? "rgba(129, 140, 248, 0.05)" : "rgba(79, 70, 229, 0.08)";
+      ctx.lineWidth = 1;
+      gridOffset = (gridOffset + 0.8) % 40;
 
-        const flicker = 0.5 + 0.5 * Math.sin(t * 2.5 + p.phase);
-        ctx.fillStyle = `rgba(148, 163, 184, ${p.alpha * flicker})`;
+      const horizonY = centerY * 0.6;
+      const gridDensity = 18;
+
+      // Vertical lines extending from horizon to bottom of screen
+      for (let i = -gridDensity; i <= gridDensity; i++) {
+        const xOffset = i * (w / gridDensity);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(centerX, horizonY);
+        ctx.lineTo(centerX + xOffset * 2.8, h);
+        ctx.stroke();
+      }
+
+      // Horizontal grid lines flowing towards the viewer
+      for (let z = gridOffset; z < centerY; z += 40) {
+        const k = (z / centerY);
+        const y = horizonY + (h - horizonY) * k * k; // quadratic spacing
+        const opacity = Math.min(0.09, k * 0.12);
+        ctx.strokeStyle = isDark
+          ? `rgba(129, 140, 248, ${opacity})`
+          : `rgba(79, 70, 229, ${opacity * 1.25})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Render 3D streaming text particles
+      ctx.font = "bold 9px var(--font-geist-mono), monospace";
+      for (const p of particles) {
+        p.z -= p.speed;
+        if (p.z <= 0) {
+          p.z = maxDepth;
+          p.x = (Math.random() - 0.5) * w * 1.8;
+          p.y = (Math.random() - 0.5) * h * 1.5;
+          p.text = gitPhrases[Math.floor(Math.random() * gitPhrases.length)];
+        }
+
+        const scale = focalLength / (focalLength + p.z);
+        const px = centerX + p.x * scale;
+        const py = centerY + p.y * scale;
+
+        if (px >= 0 && px <= w && py >= 0 && py <= h) {
+          const fade = Math.min(p.opacity, (maxDepth - p.z) / 200);
+          
+          let colorPrefix;
+          if (isDark) {
+            colorPrefix = p.colorType === 0 ? "rgba(99, 102, 241, " : "rgba(129, 140, 248, ";
+          } else {
+            colorPrefix = p.colorType === 0 ? "rgba(79, 70, 229, " : "rgba(99, 102, 241, ";
+          }
+
+          ctx.fillStyle = `${colorPrefix}${fade})`;
+          ctx.fillText(p.text, px, py);
+
+          // Node points
+          ctx.fillStyle = isDark ? `rgba(148, 163, 184, ${fade * 0.35})` : `rgba(71, 85, 105, ${fade * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(px - 6, py - 3, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       animRef.current = requestAnimationFrame(animate);
@@ -83,7 +162,7 @@ function ParticleCanvas() {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
+  }, [theme]);
 
   return <canvas ref={canvasRef} className="sd-canvas" />;
 }
@@ -95,7 +174,7 @@ class SoundEffects {
   initCtx() {
     if (typeof window === "undefined") return null;
     if (!this.ctx) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         this.ctx = new AudioContextClass();
       }
@@ -357,6 +436,101 @@ class SoundEffects {
       console.warn("SFX Error: ", e);
     }
   }
+
+  playLockNote(index: number) {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      // Frequencies for C major pentatonic chord progression: C4, D4, E4, G4, A4, C5, E5, G5
+      const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+      const freq = scale[index % scale.length];
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const biquad = ctx.createBiquadFilter();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+
+      biquad.type = "bandpass";
+      biquad.frequency.setValueAtTime(freq * 1.5, now);
+      biquad.Q.setValueAtTime(1.0, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc.connect(biquad);
+      biquad.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.85);
+
+      // Add high-tech mechanical snap click
+      const clickOsc = ctx.createOscillator();
+      const clickGain = ctx.createGain();
+      clickOsc.type = "triangle";
+      clickOsc.frequency.setValueAtTime(1200, now);
+      clickOsc.frequency.exponentialRampToValueAtTime(2200, now + 0.04);
+      
+      clickGain.gain.setValueAtTime(0.015, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(ctx.destination);
+
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.04);
+    } catch (e) {
+      console.warn("SFX Error: ", e);
+    }
+  }
+
+  playBootGlitches() {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.45;
+      
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        // Choppy bursts of random white noise
+        if (Math.floor(i / 1800) % 2 === 0) {
+          data[i] = Math.random() * 2 - 1;
+        } else {
+          data[i] = 0;
+        }
+      }
+      
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(800, now);
+      filter.frequency.exponentialRampToValueAtTime(120, now + duration);
+      filter.Q.setValueAtTime(3.0, now);
+      
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.035, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      
+      noise.start(now);
+      noise.stop(now + duration);
+    } catch (e) {
+      console.warn("SFX Error: ", e);
+    }
+  }
 }
 
 const sfx = new SoundEffects();
@@ -421,9 +595,14 @@ export function StreakCard({ totalContributions, loading, delay = 0 }: StreakCar
 
 // ── Main Component ──
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  const { theme } = useTheme();
   const { profile, stats, contributions, loading, error } = useGitHubStats();
-  const [phase, setPhase] = useState<"loading" | "visible" | "exit" | "done">("loading");
-  const [introStage, setIntroStage] = useState<"plain" | "teaser" | "flash" | "assembled">("plain");
+  const [phase, setPhase] = useState<"loading" | "booting" | "titlesweep" | "assembling" | "visible" | "exit" | "done">("loading");
+  
+  // Console logs typing progress states
+  const [consoleLogs, setConsoleLogs] = useState<{ text: string; type: string }[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
   // Unlock audio state on first interaction
   useEffect(() => {
@@ -438,44 +617,154 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
     };
   }, []);
 
+  // 1. Loading phase simulated progress and text logs typing effect
   useEffect(() => {
-    if (!loading) {
-      // Step 1: Plain screen -> Teaser
-      setIntroStage("teaser");
+    if (phase !== "loading") return;
 
-      // Play whoosh sounds for sliding teaser rows
-      const tWhoosh1 = setTimeout(() => sfx.playWhoosh(), 100);
-      const tWhoosh2 = setTimeout(() => sfx.playWhoosh(), 1300);
-      const tWhoosh3 = setTimeout(() => sfx.playWhoosh(), 2500);
-      const tWhoosh4 = setTimeout(() => sfx.playWhoosh(), 3700);
+    const start = performance.now();
+    const duration = 2800; // 2.8 seconds target boot time
 
-      // Play build charge whoosh leading to the flash
-      const tCharge = setTimeout(() => sfx.playFlashCharge(), 2300);
+    const bootLogs = [
+      { text: "INITIALIZING CONNECT SECURE PROTOCOL v4.2.0...", time: 100, type: "system" },
+      { text: "ESTABLISHING HANDSHAKE WITH API.GITHUB.COM...", time: 350, type: "system" },
+      { text: "RESOLVING IP ADDRESS: 140.82.113.5...", time: 650, type: "info" },
+      { text: "CONNECTION SECURED VIA TLS_AES_256_GCM_SHA384...", time: 950, type: "ok" },
+      { text: "REQUESTING GITHUB DATA PACKET [sandyddeveloper]...", time: 1250, type: "info" },
+      { text: "RESPONSE RECEIVED: STATUS 200 OK", time: 1550, type: "ok" },
+      { text: "PARSING REPOSITORIES & METADATA...", time: 1850, type: "info" },
+      { text: "CALCULATING COMMIT ACTIVITY & LANGUAGE BIASES...", time: 2150, type: "info" },
+      { text: "DEVR_STREAK CALCULATION COMPLETE (32 DAYS)", time: 2400, type: "ok" },
+      { text: "COMPILING DASHBOARD ASSEMBLY SCHEMATICS...", time: 2650, type: "system" },
+      { text: "BOOT SEQUENCE TERMINATED. READY TO LAUNCH.", time: 2800, type: "ok" },
+    ];
 
-      // Step 2: Teaser -> Flash overlay (trigger at 4300ms)
-      const tFlash = setTimeout(() => {
-        setIntroStage("flash");
-        sfx.playFlashBurst();
-      }, 4300);
+    let lastLoggedIndex = -1;
+    let animId = 0;
 
-      // Step 3: Flash overlay -> Assembled final state (trigger at 4550ms)
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      let targetProgress = (elapsed / duration) * 100;
+
+      if (loading) {
+        // Stalled at 98% if data hasn't loaded yet
+        targetProgress = Math.min(98, targetProgress);
+      } else {
+        targetProgress = Math.min(100, targetProgress);
+      }
+
+      setProgress(targetProgress);
+
+      // Add boot logs
+      const newLogs: { text: string; type: string }[] = [];
+      bootLogs.forEach((log, idx) => {
+        if (elapsed >= log.time && idx > lastLoggedIndex) {
+          newLogs.push({ text: log.text, type: log.type });
+          lastLoggedIndex = idx;
+        }
+      });
+
+      if (newLogs.length > 0) {
+        setConsoleLogs((prev) => [...prev, ...newLogs]);
+      }
+
+      // Handle Stalling Logs
+      if (loading && elapsed > 3000) {
+        const stallTime = elapsed - 3000;
+        const count = Math.floor(stallTime / 1200);
+        const relativeCount = count + bootLogs.length;
+        if (relativeCount > lastLoggedIndex) {
+          setConsoleLogs((prev) => {
+            const list = [...prev];
+            // Remove previous stall line
+            if (list[list.length - 1]?.text.startsWith("AWAITING GITHUB STREAM PACKET")) {
+              list.pop();
+            }
+            list.push({
+              text: `AWAITING GITHUB STREAM PACKET${".".repeat((count % 3) + 1)}`,
+              type: "warning",
+            });
+            return list;
+          });
+          lastLoggedIndex = relativeCount;
+        }
+      }
+
+      // Complete transition
+      if (!loading && targetProgress >= 100) {
+        sfx.playBootGlitches();
+        setTimeout(() => {
+          setPhase("booting");
+        }, 300);
+      } else {
+        animId = requestAnimationFrame(tick);
+      }
+    };
+
+    animId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(animId);
+  }, [phase, loading]);
+
+  // 2. State machine transitions from booting -> titlesweep -> assembling -> visible
+  useEffect(() => {
+    if (phase === "booting") {
+      sfx.playFlashBurst();
+      const t = setTimeout(() => {
+        setPhase("titlesweep");
+      }, 550);
+      return () => clearTimeout(t);
+    }
+
+    if (phase === "titlesweep") {
+      sfx.playFlashCharge();
+      const t = setTimeout(() => {
+        setPhase("assembling");
+      }, 1600);
+      return () => clearTimeout(t);
+    }
+
+    if (phase === "assembling") {
+      // Trigger detuned major pentatonic arpeggio lock chimes as cards register
+      const t0 = setTimeout(() => sfx.playLockNote(0), 100);  // Profile (T + 100ms)
+      const t1 = setTimeout(() => sfx.playLockNote(1), 400);  // Commits (T + 400ms)
+      const t2 = setTimeout(() => sfx.playLockNote(2), 600);  // PRs (T + 600ms)
+      const t3 = setTimeout(() => sfx.playLockNote(3), 800);  // Stars (T + 800ms)
+      const t4 = setTimeout(() => sfx.playLockNote(4), 1000); // Repos (T + 1000ms)
+      const t5 = setTimeout(() => sfx.playLockNote(5), 1200); // Languages (T + 1200ms)
+      const t6 = setTimeout(() => sfx.playLockNote(6), 1400); // Streak (T + 1400ms)
+      const t7 = setTimeout(() => sfx.playLockNote(7), 1600); // Activity Grid (T + 1600ms)
+
+      // Play final full chord chiming locks & complete transition to visible
       const tAssembled = setTimeout(() => {
-        setIntroStage("assembled");
         setPhase("visible");
         sfx.playAssembleChime();
-      }, 4550);
+      }, 2300);
 
       return () => {
-        clearTimeout(tWhoosh1);
-        clearTimeout(tWhoosh2);
-        clearTimeout(tWhoosh3);
-        clearTimeout(tWhoosh4);
-        clearTimeout(tCharge);
-        clearTimeout(tFlash);
+        clearTimeout(t0);
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+        clearTimeout(t4);
+        clearTimeout(t5);
+        clearTimeout(t6);
+        clearTimeout(t7);
         clearTimeout(tAssembled);
       };
     }
-  }, [loading]);
+  }, [phase]);
+
+  // 3. Trigger Welcome Dialog Popup after 3 seconds in the visible phase
+  useEffect(() => {
+    if (phase === "visible") {
+      const timer = setTimeout(() => {
+        setShowWelcomePopup(true);
+        sfx.playAssembleChime(); // Play high-tech chime sound when popup shows
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase]);
+
 
   const handleEnter = useCallback(() => {
     setPhase("exit");
@@ -487,7 +776,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
   if (phase === "done") return null;
 
-  const vis = phase === "visible" || phase === "exit";
+  const vis = phase === "visible" || phase === "exit" || phase === "assembling";
 
   const statItems = [
     { icon: "⟐", label: "Commits", value: stats?.totalCommits ?? 0 },
@@ -504,126 +793,94 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         transform: phase === "exit" ? "scale(0.97)" : "scale(1)",
       }}
     >
-      {/* 1. Only show ParticleCanvas in assembled stage */}
-      {introStage === "assembled" && <ParticleCanvas />}
+      {/* 1. Perspective Grid Background */}
+      {(phase === "titlesweep" || phase === "assembling" || phase === "visible" || phase === "exit") && <ParticleCanvas theme={theme} />}
 
-      {/* 2. Teaser gliders (fully cinematic 3D elements) */}
-      {introStage === "teaser" && (
-        <div className="sd-teaser-container">
-          {/* Scene 1: Header */}
-          <div className="sd-teaser-element sd-teaser-header">
-            <div className="sd-teaser-fullscreen-card sd-teaser-glow-blue">
-              <div className="sd-teaser-corner-hud tl" />
-              <div className="sd-teaser-corner-hud tr" />
-              <div className="sd-teaser-corner-hud bl" />
-              <div className="sd-teaser-corner-hud br" />
-              <div className="sd-teaser-heading">STATS ANALYTICS</div>
-              <div className="sd-teaser-hud-text">SYSTEM INITIALIZATION STARTED...</div>
-              <div className="sd-teaser-progressbar-container">
-                <div className="sd-teaser-progressbar" />
+      {/* 2. System Boot-up Terminal Loader */}
+      {phase === "loading" && (
+        <div className="sd-boot-container">
+          <div className="sd-boot-hud">
+            {/* Corner Bracket Accents */}
+            <span className="sd-boot-corner tl" />
+            <span className="sd-boot-corner tr" />
+            <span className="sd-boot-corner bl" />
+            <span className="sd-boot-corner br" />
+
+            <div className="sd-boot-header">
+              <span className="sd-boot-dot" />
+              <span className="sd-boot-title">SYSTEM INIT DIRECTIVE</span>
+            </div>
+
+            {/* Pulsing circular grid scanner */}
+            <div className="sd-boot-scanner">
+              <div className="sd-boot-radar">
+                <div className="sd-boot-radar-sweep" />
+                <div className="sd-boot-radar-circle c1" />
+                <div className="sd-boot-radar-circle c2" />
+                <div className="sd-boot-radar-circle c3" />
+                <span className="sd-boot-radar-glitch">SCAN ACTIVE</span>
               </div>
             </div>
-          </div>
 
-          {/* Scene 2: Profile */}
-          <div className="sd-teaser-element sd-teaser-profile">
-            <div className="sd-teaser-fullscreen-card sd-teaser-glow-indigo">
-              <div className="sd-teaser-corner-hud tl" />
-              <div className="sd-teaser-corner-hud tr" />
-              <div className="sd-teaser-corner-hud bl" />
-              <div className="sd-teaser-corner-hud br" />
-              <div className="sd-teaser-profile-content">
-                <div className="sd-teaser-avatar-wrap">
-                  <div className="sd-teaser-avatar" />
-                  <div className="sd-teaser-avatar-glow" />
+            {/* Terminal Console Logs */}
+            <div className="sd-boot-console">
+              {consoleLogs.map((log, idx) => (
+                <div key={idx} className={`sd-boot-log ${log.type}`}>
+                  <span className="sd-boot-prompt">&gt;</span> {log.text}
                 </div>
-                <div className="sd-teaser-info">
-                  <div className="sd-teaser-profile-title">DEVELOPER PROFILE</div>
-                  <div className="sd-teaser-line l1" />
-                  <div className="sd-teaser-line l2" />
-                  <div className="sd-teaser-line l3" />
-                </div>
-              </div>
+              ))}
+              <div className="sd-boot-cursor" />
             </div>
-          </div>
 
-          {/* Scene 3: Stats Grid */}
-          <div className="sd-teaser-element sd-teaser-grid">
-            <div className="sd-teaser-fullscreen-card sd-teaser-glow-purple">
-              <div className="sd-teaser-corner-hud tl" />
-              <div className="sd-teaser-corner-hud tr" />
-              <div className="sd-teaser-corner-hud bl" />
-              <div className="sd-teaser-corner-hud br" />
-              <div className="sd-teaser-grid-title">ANALYTICS METRICS</div>
-              <div className="sd-teaser-grid-content">
-                {[
-                  { lbl: "COMMITS", val: "••••", color: "#a855f7" },
-                  { lbl: "PULL REQUESTS", val: "••", color: "#ec4899" },
-                  { lbl: "STARS", val: "•••", color: "#e9d5ff" },
-                  { lbl: "REPOSITORIES", val: "••", color: "#d8b4fe" },
-                ].map((item, idx) => (
-                  <div key={idx} className="sd-teaser-card" style={{ borderColor: item.color }}>
-                    <div className="sd-teaser-card-icon" style={{ color: item.color }}>✦</div>
-                    <div className="sd-teaser-card-val" style={{ textShadow: `0 0 15px ${item.color}` }}>{item.val}</div>
-                    <div className="sd-teaser-card-lbl">{item.lbl}</div>
-                  </div>
-                ))}
+            {/* Diagnostics progress indicators */}
+            <div className="sd-boot-progress-wrap">
+              <div className="sd-boot-progress-track">
+                <div className="sd-boot-progress-fill" style={{ width: `${progress}%` }} />
               </div>
+              <div className="sd-boot-progress-pct">{Math.floor(progress)}%</div>
             </div>
-          </div>
-
-          {/* Scene 4: Bottom Layout */}
-          <div className="sd-teaser-element sd-teaser-bottom">
-            <div className="sd-teaser-fullscreen-card sd-teaser-glow-violet">
-              <div className="sd-teaser-corner-hud tl" />
-              <div className="sd-teaser-corner-hud tr" />
-              <div className="sd-teaser-corner-hud bl" />
-              <div className="sd-teaser-corner-hud br" />
-              <div className="sd-teaser-bottom-title">DATA VISUALIZATIONS</div>
-              <div className="sd-teaser-bottom-content">
-                <div className="sd-teaser-card-bottom cb1">
-                  <div className="sd-teaser-cb-header">TOP LANGUAGES</div>
-                  <div className="sd-teaser-donut-mock">
-                    <div className="sd-teaser-donut-inner" />
-                  </div>
-                </div>
-                <div className="sd-teaser-card-bottom cb2">
-                  <div className="sd-teaser-cb-header">INSIGHTS</div>
-                  <div className="sd-teaser-streak-mock">
-                    <span className="sd-teaser-streak-fire">🔥</span>
-                    <div className="sd-teaser-streak-lines">
-                      <div className="sd-teaser-streak-line" />
-                      <div className="sd-teaser-streak-line" />
-                    </div>
-                  </div>
-                </div>
-                <div className="sd-teaser-card-bottom cb3">
-                  <div className="sd-teaser-cb-header">CONTRIBUTIONS</div>
-                  <div className="sd-teaser-chart-mock">
-                    <svg viewBox="0 0 100 40" className="sd-teaser-chart-svg">
-                      <path d="M 0,35 Q 25,10 50,25 T 100,5 L 100,40 L 0,40 Z" fill="rgba(139, 92, 246, 0.15)" stroke="rgba(139, 92, 246, 0.5)" strokeWidth="2" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <div className="sd-boot-bypass-hint">Awaiting Secure Stream Handshake...</div>
           </div>
         </div>
       )}
 
-      {/* 3. Real assembled dashboard */}
-      {(introStage === "assembled" || phase === "exit") && (
+      {/* 3. Central Title reveal overlay */}
+      {phase === "titlesweep" && (
+        <div className="sd-title-reveal-container">
+          <div className="sd-title-reveal-content">
+            <div className="sd-title-sys-id">[NODE-72_INIT]</div>
+            <h2 className="sd-title-cinematic">SKYLIMIT</h2>
+            <div className="sd-title-sub-cinematic">DATA RECONSTRUCTION CHOREOGRAPHY</div>
+            <div className="sd-title-light-sweep" />
+          </div>
+        </div>
+      )}
+
+      {/* 4. Real assembled dashboard */}
+      {vis && (
         <div className="sd-fullpage">
           <div className="sd-container">
             {/* Header */}
-            <div className={`sd-header ${vis ? "sd-header-in" : ""}`}>
+            <div className="sd-header sd-header-in">
               <span className="sd-header-dot" />
               <h1 className="sd-title">Stats at a Glance</h1>
               <p className="sd-subtitle">Real-time GitHub analytics</p>
             </div>
 
             {/* Profile */}
-            <ProfileCard profile={profile} loading={loading} />
+            <div
+              className={`sd-assembly-wrapper ${phase === "visible" || phase === "exit" || phase === "assembling" ? "sd-assembly-active" : ""}`}
+              data-label="[SYS_SEC: USER_PROFILE]"
+              style={{ "--delay": 100 } as React.CSSProperties}
+            >
+              <span className="sd-hud-corner tl" />
+              <span className="sd-hud-corner tr" />
+              <span className="sd-hud-corner bl" />
+              <span className="sd-hud-corner br" />
+              <div className="sd-laser-border" />
+              <div className="sd-scanner-line" />
+              <ProfileCard profile={profile} loading={loading} />
+            </div>
 
             {/* Error banner */}
             {error && (
@@ -635,67 +892,135 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             {/* Stat Cards */}
             <div className="sd-grid">
               {statItems.map((s, i) => (
-                <StatCard
+                <div
                   key={s.label}
-                  icon={s.icon}
-                  label={s.label}
-                  value={s.value}
-                  delay={100 + i * 200}
-                  loading={loading}
-                />
+                  className={`sd-assembly-wrapper ${phase === "visible" || phase === "exit" || phase === "assembling" ? "sd-assembly-active" : ""}`}
+                  data-label={`[METRIC: ${s.label.toUpperCase().replace(" ", "_")}]`}
+                  style={{ "--delay": 400 + i * 200 } as React.CSSProperties}
+                >
+                  <span className="sd-hud-corner tl" />
+                  <span className="sd-hud-corner tr" />
+                  <span className="sd-hud-corner bl" />
+                  <span className="sd-hud-corner br" />
+                  <div className="sd-laser-border" />
+                  <div className="sd-scanner-line" />
+                  <StatCard
+                    icon={s.icon}
+                    label={s.label}
+                    value={s.value}
+                    delay={400 + i * 200}
+                    loading={loading}
+                  />
+                </div>
               ))}
             </div>
 
             {/* Bottom Row */}
             <div className="sd-bottom-row">
-              <LanguageBar
-                languages={stats?.topLanguages ?? []}
-                loading={loading}
-                delay={900}
-              />
-              <StreakCard
-                totalContributions={contributions?.totalContributions ?? 0}
-                loading={loading}
-                delay={1100}
-              />
-              <ContributionGrid
-                data={contributions}
-                loading={loading}
-                delay={1300}
-              />
+              <div
+                className={`sd-assembly-wrapper ${phase === "visible" || phase === "exit" || phase === "assembling" ? "sd-assembly-active" : ""}`}
+                data-label="[VISUALIZER: TOP_LANGUAGES]"
+                style={{ "--delay": 1200 } as React.CSSProperties}
+              >
+                <span className="sd-hud-corner tl" />
+                <span className="sd-hud-corner tr" />
+                <span className="sd-hud-corner bl" />
+                <span className="sd-hud-corner br" />
+                <div className="sd-laser-border" />
+                <div className="sd-scanner-line" />
+                <LanguageBar
+                  languages={stats?.topLanguages ?? []}
+                  loading={loading}
+                  delay={1200}
+                />
+              </div>
+              <div
+                className={`sd-assembly-wrapper ${phase === "visible" || phase === "exit" || phase === "assembling" ? "sd-assembly-active" : ""}`}
+                data-label="[ANALYTICS: DEVR_STREAK]"
+                style={{ "--delay": 1400 } as React.CSSProperties}
+              >
+                <span className="sd-hud-corner tl" />
+                <span className="sd-hud-corner tr" />
+                <span className="sd-hud-corner bl" />
+                <span className="sd-hud-corner br" />
+                <div className="sd-laser-border" />
+                <div className="sd-scanner-line" />
+                <StreakCard
+                  totalContributions={contributions?.totalContributions ?? 0}
+                  loading={loading}
+                  delay={1400}
+                />
+              </div>
+              <div
+                className={`sd-assembly-wrapper ${phase === "visible" || phase === "exit" || phase === "assembling" ? "sd-assembly-active" : ""}`}
+                data-label="[ACTIVITY: CONTRIB_GRID]"
+                style={{ "--delay": 1600 } as React.CSSProperties}
+              >
+                <span className="sd-hud-corner tl" />
+                <span className="sd-hud-corner tr" />
+                <span className="sd-hud-corner bl" />
+                <span className="sd-hud-corner br" />
+                <div className="sd-laser-border" />
+                <div className="sd-scanner-line" />
+                <ContributionGrid
+                  data={contributions}
+                  loading={loading}
+                  delay={1600}
+                />
+              </div>
             </div>
 
-            {/* CTA */}
-            <button
-              onClick={() => {
-                sfx.playClick();
-                handleEnter();
-              }}
-              onMouseEnter={() => sfx.playHover()}
-              className={`sd-cta ${vis ? "sd-cta-in" : ""}`}
-              id="splash-enter-btn"
-            >
-              <span className="sd-cta-pulse" />
-              <span className="sd-cta-text">
-                Enter Portfolio
-                <span className="sd-cta-arrow">→</span>
-              </span>
-            </button>
           </div>
         </div>
       )}
 
-      {/* 4. Full screen white flash */}
-      {introStage === "flash" && <div className="sd-flash-overlay" />}
+      {/* 5. Full screen white flash glitch */}
+      {phase === "booting" && <div className="sd-flash-overlay" />}
 
-      {/* Corner HUD accents (only visible after assembled) */}
-      {introStage === "assembled" && (
+      {/* Corner HUD accents (only visible after fully visible) */}
+      {phase === "visible" && (
         <>
           <i className="sd-corner sd-corner-tl" />
           <i className="sd-corner sd-corner-tr" />
           <i className="sd-corner sd-corner-bl" />
           <i className="sd-corner sd-corner-br" />
         </>
+      )}
+
+      {/* 6. Welcome Dialog Popup */}
+      {showWelcomePopup && (
+        <div className="sd-popup-overlay">
+          <div className="sd-popup-content">
+            <span className="sd-popup-corner tl" />
+            <span className="sd-popup-corner tr" />
+            <span className="sd-popup-corner bl" />
+            <span className="sd-popup-corner br" />
+            
+            <div className="sd-popup-header">
+              <span className="sd-popup-dot" />
+              <span className="sd-popup-title">SYSTEM NOTIFICATION</span>
+            </div>
+
+            <div className="sd-popup-body">
+              <div className="sd-popup-msg">Welcome to my portfolio</div>
+              <button
+                onClick={() => {
+                  sfx.playClick();
+                  handleEnter();
+                }}
+                onMouseEnter={() => sfx.playHover()}
+                className="sd-cta sd-cta-in"
+                id="splash-enter-btn"
+              >
+                <span className="sd-cta-pulse" />
+                <span className="sd-cta-text">
+                  Enter Portfolio
+                  <span className="sd-cta-arrow">→</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{splashCSS}</style>
@@ -709,12 +1034,84 @@ const splashCSS = `
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh; height: 100dvh;
   z-index: 9999;
-  background: #06070a;
+  background: var(--sd-bg);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   will-change: opacity, transform;
   transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
   -webkit-tap-highlight-color: transparent;
+
+  /* Default Dark Mode Theme Values */
+  --sd-bg: #06070a;
+  --sd-card-bg: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
+  --sd-card-border: rgba(129, 140, 248, 0.1);
+  --sd-card-border-hover: rgba(129, 140, 248, 0.4);
+  --sd-text-title: #f8fafc;
+  --sd-text-subtitle: #64748b;
+  --sd-hud-accent: rgba(129, 140, 248, 0.45);
+  --sd-hud-corner-accent: rgba(129, 140, 248, 0.75);
+  
+  --sd-boot-hud-bg: rgba(10, 12, 18, 0.85);
+  --sd-boot-hud-border: rgba(129, 140, 248, 0.25);
+  --sd-boot-console-bg: rgba(4, 5, 8, 0.85);
+  
+  --sd-log-system: #818cf8;
+  --sd-log-ok: #34d399;
+  --sd-log-info: #38bdf8;
+  --sd-log-warning: #fbbf24;
+  --sd-log-prompt: rgba(129, 140, 248, 0.5);
+  
+  --sd-cta-bg: rgba(129, 140, 248, 0.03);
+  --sd-cta-border: rgba(129, 140, 248, 0.16);
+  --sd-cta-text: rgba(199, 210, 254, 0.8);
+  --sd-cta-text-hover: #e0e7ff;
+
+  --sd-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.03);
+  --sd-lang-track-bg: rgba(255, 255, 255, 0.02);
+  --sd-skeleton-bg: linear-gradient(90deg, rgba(51, 56, 70, 0.25) 25%, rgba(129, 140, 248, 0.1) 50%, rgba(51, 56, 70, 0.25) 75%);
+
+  --sd-contrib-l0: rgba(55, 60, 75, 0.6);
+  --sd-contrib-l1: rgba(99, 102, 241, 0.35);
+  --sd-contrib-l2: rgba(99, 102, 241, 0.55);
+  --sd-contrib-l3: rgba(99, 102, 241, 0.78);
+  --sd-contrib-l4: rgba(129, 140, 248, 1);
+}
+
+/* Light Theme overrides when root document doesn't have .dark class */
+:root:not(.dark) .sd-root {
+  --sd-bg: #f8fafc;
+  --sd-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.8) 100%);
+  --sd-card-border: rgba(79, 70, 229, 0.08);
+  --sd-card-border-hover: rgba(79, 70, 229, 0.35);
+  --sd-text-title: #0f172a;
+  --sd-text-subtitle: #475569;
+  --sd-hud-accent: rgba(79, 70, 229, 0.45);
+  --sd-hud-corner-accent: rgba(79, 70, 229, 0.75);
+  
+  --sd-boot-hud-bg: rgba(255, 255, 255, 0.85);
+  --sd-boot-hud-border: rgba(79, 70, 229, 0.2);
+  --sd-boot-console-bg: rgba(241, 245, 249, 0.85);
+  
+  --sd-log-system: #4f46e5;
+  --sd-log-ok: #059669;
+  --sd-log-info: #0284c7;
+  --sd-log-warning: #d97706;
+  --sd-log-prompt: rgba(79, 70, 229, 0.5);
+  
+  --sd-cta-bg: rgba(79, 70, 229, 0.03);
+  --sd-cta-border: rgba(79, 70, 229, 0.16);
+  --sd-cta-text: rgba(79, 70, 229, 0.8);
+  --sd-cta-text-hover: #4f46e5;
+
+  --sd-shadow: 0 8px 32px 0 rgba(79, 70, 229, 0.04), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  --sd-lang-track-bg: rgba(0, 0, 0, 0.04);
+  --sd-skeleton-bg: linear-gradient(90deg, rgba(226, 232, 240, 0.5) 25%, rgba(79, 70, 229, 0.08) 50%, rgba(226, 232, 240, 0.5) 75%);
+
+  --sd-contrib-l0: rgba(226, 232, 240, 0.85);
+  --sd-contrib-l1: rgba(79, 70, 229, 0.25);
+  --sd-contrib-l2: rgba(79, 70, 229, 0.45);
+  --sd-contrib-l3: rgba(79, 70, 229, 0.7);
+  --sd-contrib-l4: rgba(79, 70, 229, 1);
 }
 
 .sd-canvas {
@@ -743,355 +1140,417 @@ const splashCSS = `
   height: 100%;
 }
 
-/* ── Teaser 3D Cinematic Container ── */
-.sd-teaser-container {
+/* ── System Boot Loader HUD ── */
+.sd-boot-container {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 3;
-  perspective: 2000px;
-  transform-style: preserve-3d;
-}
-.sd-teaser-element {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 5;
+  background: var(--sd-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: clamp(1rem, 3vh, 3rem) clamp(1rem, 3vw, 4rem);
-  opacity: 0;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  will-change: transform, opacity;
-  animation: sd-teaser-scroll-3d 1.7s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  padding: 2rem;
 }
-
-/* Sequential right-to-left 3D scroll offsets */
-.sd-teaser-header {
-  animation-delay: 0.1s;
-}
-.sd-teaser-profile {
-  animation-delay: 1.3s;
-}
-.sd-teaser-grid {
-  animation-delay: 2.5s;
-}
-.sd-teaser-bottom {
-  animation-delay: 3.7s;
-}
-
-@keyframes sd-teaser-scroll-3d {
-  0% {
-    transform: translate3d(100vw, 0, -800px) rotateY(45deg) scale(0.75);
-    opacity: 0;
-  }
-  30% {
-    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-    opacity: 1;
-  }
-  70% {
-    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(-100vw, 0, -800px) rotateY(-45deg) scale(0.75);
-    opacity: 0;
-  }
-}
-
-/* Teaser Fullscreen Glow Cards */
-.sd-teaser-fullscreen-card {
+.sd-boot-hud {
   position: relative;
-  width: min(92vw, 1200px);
-  height: min(80vh, 680px);
-  background: #090b11;
-  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  background: var(--sd-boot-hud-bg);
+  border: 1.5px solid var(--sd-boot-hud-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 20px var(--sd-cta-bg), var(--sd-shadow);
+  border-radius: 10px;
+  padding: 2.2rem 2rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(1.5rem, 4vh, 3rem);
+  gap: 1.6rem;
   box-sizing: border-box;
-  overflow: hidden;
-  transition: border-color 0.3s, box-shadow 0.3s;
 }
-
-.sd-teaser-glow-blue {
-  border: 2px solid rgba(59, 130, 246, 0.45);
-  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(59, 130, 246, 0.18), inset 0 0 30px rgba(59, 130, 246, 0.08);
-}
-.sd-teaser-glow-indigo {
-  border: 2px solid rgba(99, 102, 241, 0.45);
-  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(99, 102, 241, 0.18), inset 0 0 30px rgba(99, 102, 241, 0.08);
-}
-.sd-teaser-glow-purple {
-  border: 2px solid rgba(168, 85, 247, 0.45);
-  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(168, 85, 247, 0.18), inset 0 0 30px rgba(168, 85, 247, 0.08);
-}
-.sd-teaser-glow-violet {
-  border: 2px solid rgba(139, 92, 246, 0.45);
-  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(139, 92, 246, 0.18), inset 0 0 30px rgba(139, 92, 246, 0.08);
-}
-
-/* Teaser HUD Corners */
-.sd-teaser-corner-hud {
+.sd-boot-corner {
   position: absolute;
-  width: 24px;
-  height: 24px;
-  border-color: rgba(129, 140, 248, 0.65);
+  width: 16px;
+  height: 16px;
+  border-color: var(--sd-hud-corner-accent);
   border-style: solid;
   border-width: 0;
   pointer-events: none;
 }
-.sd-teaser-corner-hud.tl { top: 16px; left: 16px; border-top-width: 2.5px; border-left-width: 2.5px; }
-.sd-teaser-corner-hud.tr { top: 16px; right: 16px; border-top-width: 2.5px; border-right-width: 2.5px; }
-.sd-teaser-corner-hud.bl { bottom: 16px; left: 16px; border-bottom-width: 2.5px; border-left-width: 2.5px; }
-.sd-teaser-corner-hud.br { bottom: 16px; right: 16px; border-bottom-width: 2.5px; border-right-width: 2.5px; }
+.sd-boot-corner.tl { top: 5px; left: 5px; border-top-width: 2.5px; border-left-width: 2.5px; }
+.sd-boot-corner.tr { top: 5px; right: 5px; border-top-width: 2.5px; border-right-width: 2.5px; }
+.sd-boot-corner.bl { bottom: 5px; left: 5px; border-bottom-width: 2.5px; border-left-width: 2.5px; }
+.sd-boot-corner.br { bottom: 5px; right: 5px; border-bottom-width: 2.5px; border-right-width: 2.5px; }
 
-/* Teaser Header Scene */
-.sd-teaser-heading {
-  font-size: clamp(2.2rem, 5.5vmin, 4.2rem);
-  font-weight: 900;
-  color: #f8fafc;
-  letter-spacing: 0.35em;
-  text-shadow: 0 0 30px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.4);
-  font-family: var(--font-geist-mono), monospace;
-  text-transform: uppercase;
-  margin-bottom: 24px;
-  text-align: center;
+.sd-boot-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px dashed var(--sd-boot-hud-border);
+  padding-bottom: 0.8rem;
 }
-.sd-teaser-hud-text {
-  font-size: clamp(0.85rem, 1.8vmin, 1.25rem);
-  color: #93c5fd;
-  letter-spacing: 0.18em;
-  font-family: var(--font-geist-mono), monospace;
-  margin-bottom: 48px;
-  opacity: 0.9;
-  text-shadow: 0 0 10px rgba(147, 197, 253, 0.4);
-}
-.sd-teaser-progressbar-container {
-  width: 300px;
+.sd-boot-dot {
+  width: 8px;
   height: 8px;
-  background: rgba(59, 130, 246, 0.12);
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
-}
-.sd-teaser-progressbar {
-  height: 100%;
-  width: 65%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  border-radius: 999px;
-  box-shadow: 0 0 15px #3b82f6;
-  animation: sd-teaser-progress 2.6s ease-in-out infinite;
-}
-@keyframes sd-teaser-progress {
-  0% { width: 0%; }
-  50% { width: 85%; }
-  100% { width: 100%; }
-}
-
-/* Teaser Profile Scene */
-.sd-teaser-profile-content {
-  display: flex;
-  align-items: center;
-  gap: clamp(2.5rem, 6vw, 5rem);
-  width: 100%;
-  max-width: 850px;
-  justify-content: center;
-}
-.sd-teaser-avatar-wrap {
-  position: relative;
-  width: clamp(110px, 16vmin, 160px);
-  height: clamp(110px, 16vmin, 160px);
-  flex-shrink: 0;
-}
-.sd-teaser-avatar {
-  width: 100%;
-  height: 100%;
   border-radius: 50%;
-  border: 3.5px solid #6366f1;
-  box-shadow: 0 0 35px rgba(99, 102, 241, 0.7);
-  background: rgba(99, 102, 241, 0.12);
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: sd-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
-.sd-teaser-avatar-glow {
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  border: 1.5px dashed rgba(99, 102, 241, 0.55);
-  animation: sd-spin 12s linear infinite;
+@keyframes sd-ping {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 0.4; }
+  100% { transform: scale(0.9); opacity: 0.8; }
 }
-.sd-teaser-profile-title {
-  font-size: clamp(1.3rem, 2.5vmin, 1.95rem);
-  font-weight: 800;
-  color: #c7d2fe;
+.sd-boot-title {
   font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.12em;
-  text-shadow: 0 0 15px rgba(199, 210, 254, 0.4);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sd-text-title);
+  letter-spacing: 0.15em;
 }
-.sd-teaser-line {
-  height: 16px;
-  border-radius: 7px;
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.55), rgba(99, 102, 241, 0.15));
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
-}
-.sd-teaser-line.l1 { width: 90%; }
-.sd-teaser-line.l2 { width: 65%; }
-.sd-teaser-line.l3 { width: 50%; }
 
-/* Teaser Grid Scene */
-.sd-teaser-grid-title {
-  font-size: clamp(1.3rem, 2.5vmin, 1.95rem);
-  font-weight: 800;
-  color: #f3e8ff;
-  font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.18em;
-  margin-bottom: 35px;
-  text-align: center;
-  text-shadow: 0 0 15px rgba(243, 232, 255, 0.4);
-}
-.sd-teaser-grid-content {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  width: 100%;
-  max-width: 1000px;
-}
-@media (max-width: 768px) {
-  .sd-teaser-grid-content { grid-template-columns: repeat(2, 1fr); gap: 18px; }
-}
-.sd-teaser-card {
-  aspect-ratio: 1 / 1.15;
-  background: rgba(168, 85, 247, 0.05);
-  border: 2px solid rgba(168, 85, 247, 0.45);
-  border-radius: 18px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(168, 85, 247, 0.1);
+.sd-boot-scanner {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 24px;
+  align-items: center;
+  padding: 1rem 0;
 }
-.sd-teaser-card-icon {
-  font-size: 2.2rem;
-  filter: drop-shadow(0 0 8px currentColor);
-}
-.sd-teaser-card-val {
-  font-size: 2.6rem;
-  font-weight: 900;
-  color: #f8fafc;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-}
-.sd-teaser-card-lbl {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #c084fc;
-  font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.06em;
-  text-align: center;
-}
-
-/* Teaser Bottom Scene */
-.sd-teaser-bottom-title {
-  font-size: clamp(1.3rem, 2.5vmin, 1.95rem);
-  font-weight: 800;
-  color: #ddd6fe;
-  font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.18em;
-  margin-bottom: 35px;
-  text-align: center;
-  text-shadow: 0 0 15px rgba(221, 214, 254, 0.4);
-}
-.sd-teaser-bottom-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.15fr;
-  gap: 24px;
-  width: 100%;
-  max-width: 1100px;
-}
-@media (max-width: 860px) {
-  .sd-teaser-bottom-content { grid-template-columns: 1fr; gap: 18px; }
-}
-.sd-teaser-card-bottom {
-  background: rgba(139, 92, 246, 0.05);
-  border: 2px solid rgba(139, 92, 246, 0.45);
-  border-radius: 18px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(139, 92, 246, 0.1);
-  padding: clamp(1.2rem, 3vh, 2.2rem);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.sd-teaser-cb-header {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #c084fc;
-  font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.1em;
-  text-shadow: 0 0 6px rgba(192, 132, 252, 0.4);
-}
-.sd-teaser-donut-mock {
+.sd-boot-radar {
   position: relative;
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  border: 10px solid rgba(139, 92, 246, 0.12);
-  border-top-color: rgba(139, 92, 246, 0.75);
-  border-right-color: rgba(168, 85, 247, 0.65);
-  margin: 0 auto;
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.35);
-  animation: sd-spin 6s linear infinite;
-}
-.sd-teaser-donut-inner {
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: transparent;
-}
-.sd-teaser-streak-mock {
+  border: 1px dashed var(--sd-boot-hud-border);
   display: flex;
   align-items: center;
-  gap: 20px;
   justify-content: center;
+}
+.sd-boot-radar-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--sd-card-border);
+}
+.sd-boot-radar-circle.c1 { width: 50px; height: 50px; }
+.sd-boot-radar-circle.c2 { width: 80px; height: 80px; }
+.sd-boot-radar-circle.c3 {
+  width: 110px;
   height: 110px;
+  border-color: var(--sd-hud-accent);
+  border-style: dotted;
+  animation: sd-spin 10s linear infinite;
 }
-.sd-teaser-streak-fire {
-  font-size: 2.8rem;
-  filter: drop-shadow(0 0 12px #f97316);
+.sd-boot-radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--sd-hud-accent) 0deg, transparent 90deg);
+  animation: sd-spin 2.2s linear infinite;
 }
-.sd-teaser-streak-lines {
+@keyframes sd-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.sd-boot-radar-glitch {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  color: var(--sd-hud-accent);
+  letter-spacing: 0.08em;
+  animation: sd-glitch-text 3s infinite alternate;
+}
+
+.sd-boot-console {
+  height: 130px;
+  overflow-y: auto;
+  background: var(--sd-boot-console-bg);
+  border: 1px solid var(--sd-boot-hud-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.2rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex: 1;
+  gap: 4px;
 }
-.sd-teaser-streak-line {
-  height: 12px;
-  background: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
-  border-radius: 5px;
+.sd-boot-log {
+  color: var(--sd-text-subtitle);
 }
-.sd-teaser-streak-line:first-child { width: 85%; }
-.sd-teaser-streak-line:last-child { width: 55%; }
+.sd-boot-log.system {
+  color: var(--sd-log-system);
+}
+.sd-boot-log.ok {
+  color: var(--sd-log-ok);
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.15);
+}
+.sd-boot-log.info {
+  color: var(--sd-log-info);
+}
+.sd-boot-log.warning {
+  color: var(--sd-log-warning);
+}
+.sd-boot-prompt {
+  color: var(--sd-log-prompt);
+  margin-right: 6px;
+}
+.sd-boot-cursor {
+  width: 5px;
+  height: 10px;
+  background: var(--sd-log-system);
+  display: inline-block;
+  margin-left: 2px;
+  animation: sd-cursor-blink 1s steps(2, start) infinite;
+}
+@keyframes sd-cursor-blink {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
 
-.sd-teaser-chart-mock {
+.sd-boot-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.sd-boot-progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--sd-cta-bg);
+  border: 1px solid var(--sd-boot-hud-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sd-boot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sd-log-system), var(--sd-log-info));
+  box-shadow: 0 0 10px var(--sd-log-system);
+  border-radius: 999px;
+  transition: width 0.1s ease-out;
+}
+.sd-boot-progress-pct {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--sd-log-system);
+  font-weight: 700;
+  min-width: 32px;
+  text-align: right;
+}
+.sd-boot-bypass-hint {
+  text-align: center;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  color: var(--sd-text-subtitle);
+  letter-spacing: 0.05em;
+}
+
+/* ── Central Cinematic Title Sweep ── */
+.sd-title-reveal-container {
+  position: absolute;
+  inset: 0;
+  background: var(--sd-bg);
+  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 110px;
 }
-.sd-teaser-chart-svg {
+.sd-title-reveal-content {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.sd-title-sys-id {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.6rem, 1.2vmin, 0.78rem);
+  color: var(--sd-log-system);
+  letter-spacing: 0.2em;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+.sd-title-cinematic {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(3rem, 10vmin, 6rem);
+  font-weight: 900;
+  color: var(--sd-text-title);
+  letter-spacing: 0.45em;
+  margin: 0;
+  text-indent: 0.45em;
+  text-shadow: 0 0 40px var(--sd-card-border-hover), 0 0 80px var(--sd-card-border);
+  animation: sd-title-expand 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes sd-title-expand {
+  0% { transform: scale(0.95); letter-spacing: 0.2em; opacity: 0; filter: blur(5px); }
+  30% { opacity: 1; filter: blur(0); }
+  100% { transform: scale(1.03); letter-spacing: 0.45em; opacity: 0.9; }
+}
+.sd-title-sub-cinematic {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.55rem, 1vmin, 0.72rem);
+  color: var(--sd-text-subtitle);
+  letter-spacing: 0.3em;
+  margin-top: 14px;
+  opacity: 0.85;
+}
+.sd-title-light-sweep {
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--sd-hud-corner-accent), transparent);
+  transform: skewX(-25deg);
+  pointer-events: none;
+  animation: sd-light-sweep 1.5s ease-out forwards;
+}
+@keyframes sd-light-sweep {
+  0% { left: -150%; }
+  100% { left: 250%; }
+}
+
+/* ── Full-page centered wrapper ── */
+.sd-fullpage {
+  position: relative; z-index: 2;
+  width: 100%; height: 100%;
+  display: flex;
+  padding: clamp(1.2rem, 3vh, 2.5rem) clamp(1rem, 3vw, 3rem);
+  box-sizing: border-box;
+  backdrop-filter: blur(1px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Container ── */
+.sd-container {
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(0.8rem, 2vh, 1.4rem);
   width: 100%;
-  height: 90px;
+  max-width: 1100px;
+  margin: auto;
+  box-sizing: border-box;
+}
+
+/* ── 3D Blueprint Assembly Wrapper ── */
+.sd-assembly-wrapper {
+  position: relative;
+  border-radius: 10px;
+  opacity: 0;
+  background: var(--sd-card-bg);
+  box-shadow: var(--sd-shadow);
+  backdrop-filter: blur(12px);
+  border: 1px solid transparent;
+  transform: translate3d(0, 45px, -150px) rotateX(12deg);
+  transition: 
+    opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1), 
+    transform 1.3s cubic-bezier(0.16, 1, 0.3, 1), 
+    border-color 0.8s ease, 
+    box-shadow 0.3s ease;
+  will-change: opacity, transform;
+  width: 100%;
+}
+.sd-assembly-active {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) rotateX(0deg);
+  border-color: var(--sd-card-border);
+  transition-delay: 
+    calc(var(--delay) * 1ms), 
+    calc(var(--delay) * 1ms), 
+    calc((var(--delay) + 400) * 1ms), 
+    0ms;
+}
+.sd-assembly-active:hover {
+  border-color: var(--sd-card-border-hover);
+  box-shadow: 0 0 25px var(--sd-cta-bg), var(--sd-shadow);
+  transition-delay: 0ms;
+}
+.sd-assembly-wrapper::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -14px;
+  left: 8px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--sd-hud-accent);
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.sd-assembly-active::after {
+  opacity: 1;
+  transition-delay: calc((var(--delay) + 500) * 1ms);
+}
+
+.sd-hud-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--sd-hud-accent);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 10;
+}
+.sd-assembly-active .sd-hud-corner {
+  opacity: 0.75;
+  transition-delay: calc((var(--delay) + 350) * 1ms);
+}
+.sd-hud-corner.tl { top: 4px; left: 4px; border-top-width: 1.5px; border-left-width: 1.5px; }
+.sd-hud-corner.tr { top: 4px; right: 4px; border-top-width: 1.5px; border-right-width: 1.5px; }
+.sd-hud-corner.bl { bottom: 4px; left: 4px; border-bottom-width: 1.5px; border-left-width: 1.5px; }
+.sd-hud-corner.br { bottom: 4px; right: 4px; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+
+.sd-laser-border {
+  position: absolute;
+  inset: 0;
+  border: 1.2px dashed var(--sd-hud-accent);
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9;
+}
+.sd-assembly-active .sd-laser-border {
+  animation: sd-border-draw 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--delay) * 1ms);
+}
+@keyframes sd-border-draw {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 100% 0);
+  }
+  50% {
+    opacity: 1;
+    clip-path: inset(0 0 100% 0);
+  }
+  100% {
+    opacity: 1;
+    border-style: solid;
+    border-color: var(--sd-card-border);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.sd-scanner-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sd-hud-corner-accent), transparent);
+  box-shadow: 0 0 10px var(--sd-hud-corner-accent);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 10;
+}
+.sd-assembly-active .sd-scanner-line {
+  animation: sd-scanner-sweep 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation-delay: calc((var(--delay) + 120) * 1ms);
+}
+@keyframes sd-scanner-sweep {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
 }
 
 /* ── Fullscreen Flash Overlay ── */
@@ -1116,20 +1575,20 @@ const splashCSS = `
   will-change: opacity, transform;
 }
 .sd-header.sd-header-in {
-  animation: sd-assemble-zoom 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: sd-assemble-header 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .sd-header-dot {
   display: inline-block;
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: #818cf8;
-  box-shadow: 0 0 16px 2px rgba(129, 140, 248, 0.75);
+  background: var(--sd-log-system);
+  box-shadow: 0 0 16px 2px var(--sd-hud-corner-accent);
   margin-bottom: clamp(0.25rem, 0.5vh, 0.45rem);
   animation: sd-dot-glow 2s ease-in-out infinite alternate;
 }
 @keyframes sd-dot-glow {
-  0% { transform: scale(0.9); box-shadow: 0 0 12px rgba(129, 140, 248, 0.6); }
-  100% { transform: scale(1.15); box-shadow: 0 0 24px 4px rgba(129, 140, 248, 0.9); }
+  0% { transform: scale(0.9); box-shadow: 0 0 12px var(--sd-hud-corner-accent); }
+  100% { transform: scale(1.15); box-shadow: 0 0 24px 4px var(--sd-hud-corner-accent); }
 }
 
 .sd-title {
@@ -1137,15 +1596,15 @@ const splashCSS = `
   font-size: clamp(1.6rem, 3.8vmin, 3.2rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #f8fafc;
+  color: var(--sd-text-title);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1.1;
-  text-shadow: 0 0 40px rgba(129, 140, 248, 0.15);
+  text-shadow: 0 0 40px var(--sd-card-border);
 }
 .sd-subtitle {
   margin: 6px 0 0;
   font-size: clamp(0.75rem, 1.3vmin, 1.0rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1157,30 +1616,22 @@ const splashCSS = `
   display: flex; align-items: center;
   gap: clamp(1rem, 2vw, 1.5rem);
   width: 100%;
-  background: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
-  border: 1px solid rgba(129, 140, 248, 0.12);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
   padding: clamp(0.8rem, 1.8vh, 1.25rem) clamp(1.2rem, 2.2vw, 1.85rem);
   opacity: 0;
   will-change: opacity, transform;
-}
-.sd-profile-in {
-  animation: sd-assemble-profile 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .sd-avatar {
   width: clamp(54px, 8vmin, 76px);
   height: clamp(54px, 8vmin, 76px);
   border-radius: 50%;
-  border: 2px solid rgba(129, 140, 248, 0.35);
-  box-shadow: 0 0 16px rgba(129, 140, 248, 0.15);
+  border: 2px solid var(--sd-hud-accent);
+  box-shadow: 0 0 16px var(--sd-card-border);
   flex-shrink: 0;
   transition: transform 0.4s ease;
 }
 .sd-profile:hover .sd-avatar {
   transform: scale(1.05) rotate(3deg);
-  border-color: rgba(129, 140, 248, 0.6);
+  border-color: var(--sd-hud-corner-accent);
 }
 .sd-profile-info {
   min-width: 0;
@@ -1189,14 +1640,14 @@ const splashCSS = `
   margin: 0;
   font-size: clamp(1.0rem, 2vmin, 1.4rem);
   font-weight: 800;
-  color: #f1f5f9;
+  color: var(--sd-text-title);
   letter-spacing: -0.01em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 .sd-profile-bio {
   margin: 2px 0 0;
   font-size: clamp(0.75rem, 1.2vmin, 0.95rem);
-  color: #94a3b8;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1.35;
 }
@@ -1204,24 +1655,24 @@ const splashCSS = `
   display: flex; align-items: center; gap: 0.5rem;
   margin-top: 4px;
   font-size: clamp(0.7rem, 1.1vmin, 0.85rem);
-  color: #475569;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-mono), monospace;
   flex-wrap: wrap;
 }
 .sd-meta-num {
-  color: #a5b4fc;
+  color: var(--sd-log-system);
   font-weight: 600;
 }
 .sd-profile-meta-dot {
   color: rgba(100, 116, 139, 0.25);
 }
 .sd-meta-loc {
-  color: #64748b;
+  color: var(--sd-text-subtitle);
 }
 
 /* ── Skeleton Loading ── */
 .sd-skeleton-line {
-  background: linear-gradient(90deg, rgba(51,56,70,0.2) 25%, rgba(129,140,248,0.1) 50%, rgba(51,56,70,0.2) 75%);
+  background: var(--sd-skeleton-bg);
   background-size: 200% 100%;
   animation: sd-shimmer-move 1.6s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
   border-radius: 6px;
@@ -1238,11 +1689,10 @@ const splashCSS = `
   width: clamp(54px, 8vmin, 76px);
   height: clamp(54px, 8vmin, 76px);
   border-radius: 50%;
-  background: rgba(51,56,70,0.2);
+  background: var(--sd-skeleton-bg);
   flex-shrink: 0;
   animation: sd-shimmer-move 1.6s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
   background-size: 200% 100%;
-  background-image: linear-gradient(90deg, rgba(51,56,70,0.2) 25%, rgba(129,140,248,0.1) 50%, rgba(51,56,70,0.2) 75%);
 }
 .sd-skeleton-name { width: 140px; height: 18px; }
 .sd-skeleton-bio { width: 220px; height: 14px; margin-top: 5px; }
@@ -1253,9 +1703,9 @@ const splashCSS = `
   width: 100%;
   padding: 0.4rem 0.8rem;
   border-radius: 10px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: var(--sd-cta-bg);
+  border: 1px solid var(--sd-log-warning);
+  color: var(--sd-log-warning);
   font-size: clamp(0.55rem, 1vmin, 0.7rem);
   font-family: var(--font-geist-mono), monospace;
   text-align: center;
@@ -1265,8 +1715,9 @@ const splashCSS = `
 .sd-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(0.4rem, 0.8vmin, 0.75rem);
+  gap: clamp(0.6rem, 1.2vmin, 1.0rem);
   width: 100%;
+  margin-top: 14px;
 }
 @media (max-width: 520px) {
   .sd-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1274,11 +1725,6 @@ const splashCSS = `
 
 .sd-stat-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
-  border: 1px solid rgba(129, 140, 248, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
   padding: clamp(1rem, 2.5vh, 1.6rem) clamp(0.8rem, 1.5vw, 1.2rem);
   display: flex; flex-direction: column; align-items: center;
   gap: clamp(0.3rem, 0.6vh, 0.5rem);
@@ -1287,23 +1733,16 @@ const splashCSS = `
   cursor: default;
   will-change: opacity, transform;
 }
-.sd-stat-card.sd-card-in {
-  animation: sd-assemble-stat 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.sd-stat-card:hover {
-  border-color: rgba(129,140,248,0.4);
-  box-shadow: 0 0 25px rgba(129,140,248,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
-}
 .sd-stat-icon {
   font-size: clamp(1.1rem, 1.8vmin, 1.4rem);
-  color: #818cf8;
+  color: var(--sd-log-system);
   line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(129,140,248,0.35));
+  filter: drop-shadow(0 0 6px var(--sd-hud-accent));
 }
 .sd-stat-value {
   font-size: clamp(1.8rem, 3.5vmin, 2.8rem);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--sd-text-title);
   line-height: 1.1;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
@@ -1312,7 +1751,7 @@ const splashCSS = `
 .sd-stat-label {
   font-size: clamp(0.6rem, 1vmin, 0.75rem);
   font-weight: 500;
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-family: var(--font-geist-mono), monospace;
@@ -1320,7 +1759,7 @@ const splashCSS = `
 .sd-stat-shimmer {
   position: absolute; top: 0; left: -100%;
   width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.02) 40%, rgba(129, 140, 248, 0.08) 50%, rgba(129, 140, 248, 0.02) 60%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--sd-cta-bg) 40%, var(--sd-hud-accent) 50%, var(--sd-cta-bg) 60%, transparent 100%);
   pointer-events: none;
 }
 .sd-stat-card.sd-card-in .sd-stat-shimmer {
@@ -1342,10 +1781,11 @@ const splashCSS = `
 .sd-bottom-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1.15fr;
-  gap: clamp(0.4rem, 0.8vmin, 0.75rem);
+  gap: clamp(0.6rem, 1.2vmin, 1.0rem);
   width: 100%;
   min-height: 0;
   flex: 1 1 auto;
+  margin-top: 14px;
 }
 @media (max-width: 860px) {
   .sd-bottom-row { grid-template-columns: 1fr; }
@@ -1354,18 +1794,10 @@ const splashCSS = `
 /* ── Streak / Insights Section ── */
 .sd-streak-section {
   width: 100%;
-  background: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
-  border: 1px solid rgba(129, 140, 248, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
   padding: clamp(1rem, 2.5vh, 1.6rem) clamp(1.2rem, 2vw, 1.8rem);
   display: flex; flex-direction: column;
   opacity: 0;
   will-change: opacity, transform;
-}
-.sd-streak-in {
-  animation: sd-assemble-streak 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .sd-streak-list {
   display: flex;
@@ -1378,15 +1810,15 @@ const splashCSS = `
   display: flex;
   align-items: center;
   gap: clamp(0.6rem, 1.2vw, 1.0rem);
-  background: rgba(129, 140, 248, 0.02);
-  border: 1px solid rgba(129, 140, 248, 0.05);
+  background: var(--sd-cta-bg);
+  border: 1px solid var(--sd-cta-border);
   padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.6rem, 1.2vw, 0.9rem);
   border-radius: 10px;
   transition: border-color 0.3s, background-color 0.3s;
 }
 .sd-streak-item:hover {
-  border-color: rgba(129, 140, 248, 0.2);
-  background: rgba(129, 140, 248, 0.04);
+  border-color: var(--sd-hud-accent);
+  background: var(--sd-card-border);
 }
 .sd-streak-icon-wrap {
   font-size: clamp(1rem, 1.8vmin, 1.4rem);
@@ -1399,7 +1831,7 @@ const splashCSS = `
 }
 .sd-streak-label {
   font-size: clamp(0.5rem, 0.85vmin, 0.65rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   text-transform: uppercase;
   font-family: var(--font-geist-mono), monospace;
   font-weight: 500;
@@ -1420,24 +1852,16 @@ const splashCSS = `
 /* ── Language Bar Section ── */
 .sd-lang-section {
   width: 100%;
-  background: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
-  border: 1px solid rgba(129, 140, 248, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
   padding: clamp(1rem, 2.5vh, 1.6rem) clamp(1.2rem, 2vw, 1.8rem);
   display: flex; flex-direction: column;
   opacity: 0;
   will-change: opacity, transform;
 }
-.sd-lang-in {
-  animation: sd-assemble-lang 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
 .sd-section-title {
   margin: 0 0 clamp(0.5rem, 0.8vh, 0.75rem);
   font-size: clamp(0.7rem, 1.2vmin, 0.85rem);
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--sd-text-subtitle);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: var(--font-geist-mono), monospace;
@@ -1459,7 +1883,7 @@ const splashCSS = `
 .sd-lang-doughnut {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 10px rgba(129, 140, 248, 0.25));
+  filter: drop-shadow(0 0 10px var(--sd-card-border-hover));
 }
 .sd-lang-center-text {
   position: absolute;
@@ -1473,13 +1897,13 @@ const splashCSS = `
 .sd-lang-center-val {
   font-size: clamp(1.1rem, 2vmin, 1.45rem);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--sd-text-title);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1;
 }
 .sd-lang-center-lbl {
   font-size: clamp(0.5rem, 0.8vmin, 0.62rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-mono), monospace;
   text-transform: uppercase;
   margin-top: 2px;
@@ -1511,13 +1935,13 @@ const splashCSS = `
 }
 .sd-lang-name {
   font-size: clamp(0.62rem, 1vmin, 0.76rem);
-  color: #94a3b8;
+  color: var(--sd-text-title);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-weight: 500;
 }
 .sd-lang-pct {
   font-size: clamp(0.55rem, 0.9vmin, 0.68rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-mono), monospace;
   margin-left: auto;
 }
@@ -1525,7 +1949,7 @@ const splashCSS = `
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--sd-cta-bg);
   overflow: hidden;
 }
 .sd-lang-item-bar {
@@ -1535,7 +1959,7 @@ const splashCSS = `
 .sd-lang-skeleton { opacity: 1; }
 .sd-lang-track-skeleton {
   width: 100%; height: 7px; border-radius: 999px;
-  background: linear-gradient(90deg, rgba(51,56,70,0.2) 25%, rgba(129,140,248,0.1) 50%, rgba(51,56,70,0.2) 75%);
+  background: var(--sd-skeleton-bg);
   background-size: 200% 100%;
   animation: sd-shimmer-move 1.6s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
 }
@@ -1548,19 +1972,11 @@ const splashCSS = `
 /* ── Contribution Grid ── */
 .sd-contrib-section {
   width: 100%;
-  background: linear-gradient(135deg, rgba(15, 17, 26, 0.75) 0%, rgba(8, 9, 15, 0.8) 100%);
-  border: 1px solid rgba(129, 140, 248, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
   padding: clamp(1rem, 2.5vh, 1.6rem) clamp(1.2rem, 2vw, 1.8rem);
   display: flex; flex-direction: column;
   min-width: 0;
   opacity: 0;
   will-change: opacity, transform;
-}
-.sd-contrib-in {
-  animation: sd-assemble-contrib 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .sd-contrib-header {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -1568,7 +1984,7 @@ const splashCSS = `
 }
 .sd-contrib-total {
   font-size: clamp(0.6rem, 0.9vmin, 0.75rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-mono), monospace;
 }
 .sd-contrib-grid {
@@ -1596,7 +2012,7 @@ const splashCSS = `
 }
 .sd-contrib-legend-label {
   font-size: clamp(0.55rem, 0.85vmin, 0.68rem);
-  color: #475569;
+  color: var(--sd-text-subtitle);
   font-family: var(--font-geist-mono), monospace;
   margin: 0 3px;
 }
@@ -1610,7 +2026,7 @@ const splashCSS = `
 .sd-contrib-chart-wrap {
   margin-top: clamp(0.7rem, 1.5vh, 1.2rem);
   padding-top: clamp(0.6rem, 1.2vh, 1rem);
-  border-top: 1px dashed rgba(129, 140, 248, 0.08);
+  border-top: 1px dashed var(--sd-card-border);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1623,7 +2039,7 @@ const splashCSS = `
 }
 .sd-contrib-chart-lbl {
   font-size: clamp(0.5rem, 0.85vmin, 0.65rem);
-  color: #64748b;
+  color: var(--sd-text-subtitle);
   text-transform: uppercase;
   font-family: var(--font-geist-mono), monospace;
   font-weight: 500;
@@ -1631,10 +2047,10 @@ const splashCSS = `
 }
 .sd-contrib-chart-peak {
   font-size: clamp(0.48rem, 0.8vmin, 0.6rem);
-  color: #818cf8;
+  color: var(--sd-log-system);
   font-family: var(--font-geist-mono), monospace;
   font-weight: 500;
-  background: rgba(129, 140, 248, 0.05);
+  background: var(--sd-cta-bg);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -1657,12 +2073,22 @@ const splashCSS = `
   background: rgba(51,56,70,0.2);
 }
 
+/* ── Child Assembly Transitions ── */
+.sd-profile-in,
+.sd-stat-card.sd-card-in,
+.sd-streak-in,
+.sd-lang-in,
+.sd-contrib-in {
+  animation: sd-assemble-child 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc((var(--delay) + 200) * 1ms);
+}
+
 /* ── CTA ── */
 .sd-cta {
   position: relative;
   padding: clamp(0.6rem, 1.2vh, 0.95rem) clamp(2rem, 4vw, 3.5rem);
-  background: rgba(129, 140, 248, 0.03);
-  border: 1px solid rgba(129, 140, 248, 0.16);
+  background: var(--sd-cta-bg);
+  border: 1px solid var(--sd-cta-border);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(10px);
   border-radius: 11px;
@@ -1681,14 +2107,14 @@ const splashCSS = `
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .sd-cta:hover {
-  border-color: rgba(129,140,248,0.55);
-  box-shadow: 0 0 30px rgba(129,140,248,0.12), inset 0 0 20px rgba(129,140,248,0.06);
+  border-color: var(--sd-hud-accent);
+  box-shadow: 0 0 30px var(--sd-cta-bg), inset 0 0 20px var(--sd-cta-bg);
 }
 .sd-cta:active { transform: scale(0.97); }
 .sd-cta-pulse {
   position: absolute; inset: -1px;
   border-radius: 11px;
-  border: 1px solid rgba(129,140,248,0.2);
+  border: 1px solid var(--sd-cta-border);
   animation: sd-pulse 3.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1702,13 +2128,13 @@ const splashCSS = `
   font-size: clamp(0.7rem, 1.15vmin, 0.88rem);
   font-weight: 600;
   letter-spacing: 0.12em;
-  color: rgba(199,210,254,0.8);
+  color: var(--sd-cta-text);
   font-family: var(--font-geist-mono), monospace;
   text-transform: uppercase;
   white-space: nowrap;
   transition: color 0.3s;
 }
-.sd-cta:hover .sd-cta-text { color: #e0e7ff; }
+.sd-cta:hover .sd-cta-text { color: var(--sd-cta-text-hover); }
 .sd-cta-arrow {
   display: inline-block;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1726,38 +2152,160 @@ const splashCSS = `
   opacity: 0;
   animation: sd-corner-fade 1.2s ease 1.8s forwards;
 }
-.sd-corner-tl { top: clamp(10px, 1.8vmin, 20px); left: clamp(10px, 1.8vmin, 20px); border-top: 1.5px solid rgba(129,140,248,0.15); border-left: 1.5px solid rgba(129,140,248,0.15); }
-.sd-corner-tr { top: clamp(10px, 1.8vmin, 20px); right: clamp(10px, 1.8vmin, 20px); border-top: 1.5px solid rgba(129,140,248,0.15); border-right: 1.5px solid rgba(129,140,248,0.15); }
-.sd-corner-bl { bottom: clamp(10px, 1.8vmin, 20px); left: clamp(10px, 1.8vmin, 20px); border-bottom: 1.5px solid rgba(129,140,248,0.15); border-left: 1.5px solid rgba(129,140,248,0.15); }
-.sd-corner-br { bottom: clamp(10px, 1.8vmin, 20px); right: clamp(10px, 1.8vmin, 20px); border-bottom: 1.5px solid rgba(129,140,248,0.15); border-right: 1.5px solid rgba(129,140,248,0.15); }
+.sd-corner-tl { top: clamp(10px, 1.8vmin, 20px); left: clamp(10px, 1.8vmin, 20px); border-top: 1.5px solid var(--sd-hud-accent); border-left: 1.5px solid var(--sd-hud-accent); }
+.sd-corner-tr { top: clamp(10px, 1.8vmin, 20px); right: clamp(10px, 1.8vmin, 20px); border-top: 1.5px solid var(--sd-hud-accent); border-right: 1.5px solid var(--sd-hud-accent); }
+.sd-corner-bl { bottom: clamp(10px, 1.8vmin, 20px); left: clamp(10px, 1.8vmin, 20px); border-bottom: 1.5px solid var(--sd-hud-accent); border-left: 1.5px solid var(--sd-hud-accent); }
+.sd-corner-br { bottom: clamp(10px, 1.8vmin, 20px); right: clamp(10px, 1.8vmin, 20px); border-bottom: 1.5px solid var(--sd-hud-accent); border-right: 1.5px solid var(--sd-hud-accent); }
 @keyframes sd-corner-fade {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
+
+/* ── Compact Viewport Adjustments (Shorter heights) ── */
+@media (max-height: 800px) {
+  .sd-fullpage {
+    padding: clamp(0.6rem, 1.5vh, 1.2rem) clamp(0.8rem, 2vw, 2.2rem);
+  }
+  .sd-container {
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+  }
+  .sd-profile {
+    padding: 0.6rem 1.2rem;
+  }
+  .sd-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .sd-stat-card {
+    padding: 0.6rem 0.8rem;
+  }
+  .sd-stat-value {
+    font-size: clamp(1.4rem, 2.5vmin, 2.2rem);
+  }
+  .sd-streak-section, .sd-lang-section, .sd-contrib-section {
+    padding: 0.8rem 1.2rem;
+  }
+  .sd-lang-chart-container {
+    width: 90px;
+    height: 90px;
+  }
+  .sd-lang-body {
+    gap: 1rem;
+  }
+  .sd-contrib-chart-wrap {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+  }
+}
+
 /* ── Side Assembly Keyframes ── */
 @keyframes sd-assemble-header {
-  0% { opacity: 0; transform: translateY(-60px); }
+  0% { opacity: 0; transform: translateY(-30px); }
   100% { opacity: 1; transform: translateY(0); }
 }
-@keyframes sd-assemble-profile {
-  0% { opacity: 0; transform: translate3d(-150px, 0, 0); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+@keyframes sd-assemble-child {
+  0% { opacity: 0; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
 }
-@keyframes sd-assemble-stat {
-  0% { opacity: 0; transform: translate3d(0, -60px, 0); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+
+/* ── Welcome Dialog Popup ── */
+.sd-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 10, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: sd-popup-fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-@keyframes sd-assemble-lang {
-  0% { opacity: 0; transform: translate3d(-120px, 120px, 0) scale(0.95); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+:root:not(.dark) .sd-popup-overlay {
+  background: rgba(248, 250, 252, 0.45);
 }
-@keyframes sd-assemble-streak {
-  0% { opacity: 0; transform: translate3d(0, 150px, 0) scale(0.95); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+@keyframes sd-popup-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
-@keyframes sd-assemble-contrib {
-  0% { opacity: 0; transform: translate3d(120px, 120px, 0) scale(0.95); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+
+.sd-popup-content {
+  position: relative;
+  width: 90%;
+  max-width: 420px;
+  background: var(--sd-card-bg);
+  border: 1.5px solid var(--sd-hud-accent);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 30px var(--sd-cta-bg), var(--sd-shadow);
+  border-radius: 10px;
+  padding: 2.2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-sizing: border-box;
+  transform: translateY(20px) scale(0.95);
+  animation: sd-popup-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes sd-popup-slide-up {
+  0% { transform: translateY(20px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.sd-popup-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--sd-hud-corner-accent);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+.sd-popup-corner.tl { top: 5px; left: 5px; border-top-width: 2px; border-left-width: 2px; }
+.sd-popup-corner.tr { top: 5px; right: 5px; border-top-width: 2px; border-right-width: 2px; }
+.sd-popup-corner.bl { bottom: 5px; left: 5px; border-bottom-width: 2px; border-left-width: 2px; }
+.sd-popup-corner.br { bottom: 5px; right: 5px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.sd-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px dashed var(--sd-card-border);
+  padding-bottom: 0.8rem;
+  justify-content: center;
+}
+.sd-popup-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sd-log-ok);
+  box-shadow: 0 0 8px var(--sd-log-ok);
+  animation: sd-popup-pulse 1.5s ease-in-out infinite alternate;
+}
+@keyframes sd-popup-pulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+.sd-popup-title {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sd-text-subtitle);
+  letter-spacing: 0.12em;
+}
+
+.sd-popup-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+.sd-popup-msg {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: clamp(1.1rem, 2.2vmin, 1.4rem);
+  font-weight: 800;
+  color: var(--sd-text-title);
+  letter-spacing: -0.01em;
+  text-align: center;
+  line-height: 1.3;
 }
 `;
 

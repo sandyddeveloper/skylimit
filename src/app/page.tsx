@@ -23,18 +23,35 @@ export default function Home() {
   const sectionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cloudsEffect: any = null;
-    let ringsEffect: any = null;
+    let cloudsEffect: { destroy: () => void } | null = null;
+    let ringsEffect: { destroy: () => void } | null = null;
     let isCleanedUp = false;
 
     const initVanta = async () => {
       try {
-        const THREE_COMPAT: any = { ...THREE };
-        THREE_COMPAT.PlaneBufferGeometry = THREE.PlaneGeometry;
-        THREE_COMPAT.VertexColors = true;
+        const THREE_COMPAT = {
+          ...THREE,
+          PlaneBufferGeometry: THREE.PlaneGeometry,
+          VertexColors: true,
+        } as unknown as typeof THREE & { PlaneBufferGeometry: typeof THREE.PlaneGeometry; VertexColors: boolean };
+
+        // Patch BufferGeometry to prevent Vanta NaN errors in newer Three.js versions
+        const originalCompute = THREE.BufferGeometry.prototype.computeBoundingSphere;
+        THREE.BufferGeometry.prototype.computeBoundingSphere = function(this: THREE.BufferGeometry) {
+          const positionAttr = this.getAttribute("position");
+          if (positionAttr && positionAttr.array) {
+            const arr = positionAttr.array as unknown as Float32Array;
+            for (let i = 0; i < arr.length; i++) {
+              if (isNaN(arr[i])) {
+                arr[i] = 0;
+              }
+            }
+          }
+          originalCompute.call(this);
+        };
 
         if (typeof window !== "undefined") {
-          (window as any).THREE = THREE_COMPAT;
+          (window as unknown as { THREE: unknown }).THREE = THREE_COMPAT;
         }
 
         const CLOUDS = (await import("vanta/dist/vanta.clouds.min")).default;

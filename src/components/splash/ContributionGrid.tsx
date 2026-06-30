@@ -10,11 +10,11 @@ interface ContributionGridProps {
 }
 
 const LEVEL_COLORS = [
-  "rgba(55, 60, 75, 0.6)",    // level 0 — empty (visible grid shape)
-  "rgba(99, 102, 241, 0.35)", // level 1
-  "rgba(99, 102, 241, 0.55)", // level 2
-  "rgba(99, 102, 241, 0.78)", // level 3
-  "rgba(129, 140, 248, 1)",   // level 4
+  "var(--sd-contrib-l0)",    // level 0 — empty (visible grid shape)
+  "var(--sd-contrib-l1)", // level 1
+  "var(--sd-contrib-l2)", // level 2
+  "var(--sd-contrib-l3)", // level 3
+  "var(--sd-contrib-l4)",   // level 4
 ];
 
 export function ContributionGrid({ data, loading, delay = 400 }: ContributionGridProps) {
@@ -107,18 +107,18 @@ export function ContributionGrid({ data, loading, delay = 400 }: ContributionGri
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="sd-contrib-chart-svg">
           <defs>
             <linearGradient id="contrib-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="var(--sd-log-system)" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="var(--sd-log-system)" stopOpacity="0.0" />
             </linearGradient>
           </defs>
-          <line x1="0" y1={chartHeight - 4} x2={chartWidth} y2={chartHeight - 4} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-          <line x1="0" y1="4" x2={chartWidth} y2="4" stroke="rgba(255,255,255,0.01)" strokeWidth="1" />
+          <line x1="0" y1={chartHeight - 4} x2={chartWidth} y2={chartHeight - 4} stroke="var(--sd-card-border)" strokeWidth="1" />
+          <line x1="0" y1="4" x2={chartWidth} y2={4} stroke="var(--sd-card-border)" strokeOpacity="0.35" strokeWidth="1" />
           
           <path d={areaPath} fill="url(#contrib-area-grad)" />
           <path
             d={linePath}
             fill="transparent"
-            stroke="#818cf8"
+            stroke="var(--sd-log-system)"
             strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
