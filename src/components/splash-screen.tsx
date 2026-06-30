@@ -800,26 +800,14 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       {phase === "loading" && (
         <div className="sd-boot-container">
           <div className="sd-boot-hud">
-            {/* Corner Bracket Accents */}
-            <span className="sd-boot-corner tl" />
-            <span className="sd-boot-corner tr" />
-            <span className="sd-boot-corner bl" />
-            <span className="sd-boot-corner br" />
-
-            <div className="sd-boot-header">
-              <span className="sd-boot-dot" />
-              <span className="sd-boot-title">SYSTEM INIT DIRECTIVE</span>
+            {/* Minimalist Glowing Logo */}
+            <div className="sd-boot-logo-container">
+              <div className="sd-boot-logo-mark">SR</div>
             </div>
 
-            {/* Pulsing circular grid scanner */}
-            <div className="sd-boot-scanner">
-              <div className="sd-boot-radar">
-                <div className="sd-boot-radar-sweep" />
-                <div className="sd-boot-radar-circle c1" />
-                <div className="sd-boot-radar-circle c2" />
-                <div className="sd-boot-radar-circle c3" />
-                <span className="sd-boot-radar-glitch">SCAN ACTIVE</span>
-              </div>
+            <div className="sd-boot-header">
+              <span className="sd-boot-dot animate-pulse" />
+              <span className="sd-boot-title">Initializing SKYLIMIT Core</span>
             </div>
 
             {/* Terminal Console Logs */}
@@ -839,7 +827,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
               </div>
               <div className="sd-boot-progress-pct">{Math.floor(progress)}%</div>
             </div>
-            <div className="sd-boot-bypass-hint">Awaiting Secure Stream Handshake...</div>
+            <div className="sd-boot-bypass-hint">Establishing Secure Handshake...</div>
           </div>
         </div>
       )}
@@ -987,18 +975,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         </>
       )}
 
-      {/* 6. Welcome Dialog Popup */}
       {showWelcomePopup && (
         <div className="sd-popup-overlay">
           <div className="sd-popup-content">
-            <span className="sd-popup-corner tl" />
-            <span className="sd-popup-corner tr" />
-            <span className="sd-popup-corner bl" />
-            <span className="sd-popup-corner br" />
-            
             <div className="sd-popup-header">
               <span className="sd-popup-dot" />
-              <span className="sd-popup-title">SYSTEM NOTIFICATION</span>
+              <span className="sd-popup-title">SYSTEM SECURE STATUS: OK</span>
             </div>
 
             <div className="sd-popup-body">
@@ -1009,7 +991,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
                   handleEnter();
                 }}
                 onMouseEnter={() => sfx.playHover()}
-                className="sd-cta sd-cta-in"
+                className="sd-cta sd-cta-in font-semibold"
                 id="splash-enter-btn"
               >
                 <span className="sd-cta-pulse" />
@@ -1029,6 +1011,273 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 }
 
 const splashCSS = `
+/* ── Overrides for Professional Modern Design ── */
+.sd-boot-hud {
+  max-width: 450px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2rem !important;
+}
+
+.sd-boot-container {
+  position: relative;
+}
+
+/* Floating colored ambient background glow blobs */
+.sd-boot-container::before {
+  content: "";
+  position: absolute;
+  top: -10%; left: -10%;
+  width: 60%; height: 60%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, transparent 70%);
+  filter: blur(80px);
+  animation: float-blob-1 20s infinite alternate;
+  pointer-events: none;
+}
+.sd-boot-container::after {
+  content: "";
+  position: absolute;
+  bottom: -10%; right: -10%;
+  width: 60%; height: 60%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.12) 0%, transparent 70%);
+  filter: blur(80px);
+  animation: float-blob-2 25s infinite alternate;
+  pointer-events: none;
+}
+@keyframes float-blob-1 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(12%, 18%) scale(1.25); }
+}
+@keyframes float-blob-2 {
+  0% { transform: translate(0, 0) scale(1.25); }
+  100% { transform: translate(-18%, -12%) scale(1); }
+}
+
+.sd-boot-logo-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3), inset 0 0 24px rgba(255, 255, 255, 0.02);
+  margin-bottom: 0.5rem !important;
+}
+.sd-boot-logo-container::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #6366f1;
+  border-bottom-color: #ec4899;
+  animation: sd-logo-spin 2.2s linear infinite;
+}
+.sd-boot-logo-container::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1px dashed rgba(168, 85, 247, 0.3);
+  animation: sd-logo-spin-reverse 7s linear infinite;
+}
+@keyframes sd-logo-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes sd-logo-spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.sd-boot-logo-mark {
+  font-size: 2rem !important;
+  font-weight: 900 !important;
+  font-family: var(--font-geist-sans), system-ui, sans-serif !important;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  letter-spacing: -0.03em !important;
+}
+
+.sd-boot-progress-wrap {
+  width: 260px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+}
+.sd-boot-progress-track {
+  width: 100% !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+:root:not(.dark) .sd-boot-progress-track {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+.sd-boot-progress-fill {
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899) !important;
+}
+.sd-boot-progress-pct {
+  font-size: 0.9rem !important;
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+  font-family: var(--font-geist-mono), monospace !important;
+  letter-spacing: 0.04em;
+}
+:root:not(.dark) .sd-boot-progress-pct {
+  color: #0f172a !important;
+}
+
+.sd-boot-console {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  height: 36px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  width: 100% !important;
+  pointer-events: none;
+}
+.sd-boot-log {
+  font-size: 0.76rem !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-family: var(--font-geist-mono), monospace !important;
+  text-align: center !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  animation: sd-fade-up-log 0.3s ease-out forwards;
+}
+:root:not(.dark) .sd-boot-log {
+  color: rgba(15, 23, 42, 0.55) !important;
+}
+.sd-boot-log.ok { color: rgba(52, 211, 153, 0.8) !important; }
+.sd-boot-log.warning { color: rgba(251, 191, 36, 0.8) !important; }
+.sd-boot-prompt, .sd-boot-cursor {
+  display: none !important;
+}
+@keyframes sd-fade-up-log {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.sd-boot-bypass-hint {
+  font-size: 0.62rem !important;
+  color: rgba(255, 255, 255, 0.22) !important;
+  letter-spacing: 0.12em;
+  font-family: var(--font-geist-mono), monospace;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+}
+:root:not(.dark) .sd-boot-bypass-hint {
+  color: rgba(15, 23, 42, 0.3) !important;
+}
+
+/* Hide corner accents, radar, and laser lines for modern minimalistic professional feel */
+.sd-boot-corner, .sd-boot-scanner, .sd-laser-border, .sd-scanner-line, .sd-popup-corner {
+  display: none !important;
+}
+
+/* Glassmorphic assembled stats cards overrides */
+.sd-assembly-wrapper {
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: rgba(10, 12, 18, 0.45) !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  overflow: hidden;
+}
+:root:not(.dark) .sd-assembly-wrapper {
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04) !important;
+}
+.sd-assembly-wrapper:hover {
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  transform: translateY(-2px);
+}
+
+/* Welcome Popup Card override */
+.sd-popup-content {
+  border-radius: 28px !important;
+  background: rgba(10, 12, 18, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(30px) !important;
+  padding: 3rem 2.5rem !important;
+  box-shadow: 0 50px 100px rgba(0, 0, 0, 0.6) !important;
+}
+:root:not(.dark) .sd-popup-content {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 50px 100px rgba(0, 0, 0, 0.1) !important;
+}
+
+.sd-popup-header {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05) !important;
+  padding-bottom: 1rem !important;
+}
+:root:not(.dark) .sd-popup-header {
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06) !important;
+}
+
+.sd-popup-title {
+  color: var(--sd-text-subtitle) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.15em !important;
+}
+
+.sd-popup-msg {
+  font-size: 1.4rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--sd-text-title) !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Redesigned Enter Portfolio Button */
+.sd-cta {
+  background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%) !important;
+  border: none !important;
+  border-radius: 9999px !important; /* Pill shaped */
+  padding: 0.9rem 3.5rem !important;
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+.sd-cta:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.5) !important;
+}
+.sd-cta:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+.sd-cta-text {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.08em !important;
+}
+.sd-cta-pulse {
+  display: none !important;
+}
+
 /* ── Root ── */
 .sd-root {
   position: fixed; top: 0; left: 0;

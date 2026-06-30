@@ -69,9 +69,9 @@ export default function Home() {
               gyroControls: false,
               minHeight: 200.0,
               minWidth: 200.0,
-              backgroundColor: isDark ? 0x06070a : 0xf8fafc,
-              skyColor: isDark ? 0x0c1020 : 0xc0e0ff,
-              cloudColor: isDark ? 0x1e1b4b : 0xffffff,
+              backgroundColor: isDark ? 0x05070a : 0xf8fafc,
+              skyColor: isDark ? 0x05070a : 0xc0e0ff,
+              cloudColor: isDark ? 0x1a2436 : 0xffffff,
             });
           }
 

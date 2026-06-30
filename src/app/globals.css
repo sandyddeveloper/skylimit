@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Soft theme-aware radial background glow for hero readability */
+.hero-glow {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 75%);
+}
+
+.dark .hero-glow {
+  background: radial-gradient(circle at center, rgba(5, 7, 10, 0.65) 0%, rgba(5, 7, 10, 0) 75%);
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
@@ -90,4 +101,35 @@ body {
   color: var(--foreground);
   transition-property: color, background-color;
   transition-duration: 200ms;
+}
+
+/* Floating Bubbles Animation for Ocean themed section */
+.ocean-bubble {
+  position: absolute;
+  bottom: -20px;
+  background: radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.02));
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float-bubble 10s infinite linear;
+}
+
+:root:not(.dark) .ocean-bubble {
+  background: radial-gradient(circle at 30% 30%, rgba(14, 116, 144, 0.2), rgba(14, 116, 144, 0.01));
+}
+
+@keyframes float-bubble {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-400px) translateX(25px) scale(1.1);
+    opacity: 0;
+  }
 }
